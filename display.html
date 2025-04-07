@@ -19,14 +19,14 @@
             height: 100%;
             z-index: -1;
             background-size: cover;
-            animation: changeBackground 30s steps(1, end) infinite;
+            animation: changeBackground 60s steps(1, end) infinite;
         }
         iframe {
             position: absolute;
             top: 80%;
             left: 10%;
-            width: 40%;
-            height: 40%;
+            width: 50%;
+            height: 50%;
             border: none;
         }
     </style>
@@ -38,7 +38,7 @@
         async function fetchParams() {
             const response = await fetch('/params');
             const { pID, wnr } = await response.json();
-            document.getElementById('liveScore').src = `https://www.nttb-ranglijsten.nl/sb/sb_livescore.html?pID=${pID}&wnr=${wnr}&templ=1`;
+            document.getElementById('liveScore').src = `https://www.nttb-ranglijsten.nl/sb/sb_livescore.html?pID=${pID}&wnr=${wnr}&templ=5`;
         }
 
         async function fetchImages() {

@@ -47,7 +47,7 @@
             const keyframes = images.map((url, index) => `
                      ${(index / images.length) * 100}% {
                         background: url('${url}') no-repeat center center fixed;
-                        background-size: cover;
+                        background-size: contain;
                          }
                     `).join(' ');
             const styleSheet = document.styleSheets[0];

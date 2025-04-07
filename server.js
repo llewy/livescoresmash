@@ -8,19 +8,17 @@ const session = require('express-session');
 const cookieParser = require('cookie-parser');
 const app = express();
 const port = 3000;
-const RedisStore = require('connect-redis').default;
-const redisClient = require('redis').createClient();
 
 app.use(express.json());
 app.use(express.static('public'));
 app.use(cookieParser());
 app.use(session({
-    store: new RedisStore({ client: redisClient }),
     secret: 'your_secret_key',
     resave: false,
     saveUninitialized: true,
     cookie: { secure: false } // Set to true if using HTTPS
 }));
+
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
     api_key: process.env.CLOUDINARY_API_KEY,

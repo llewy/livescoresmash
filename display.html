@@ -44,7 +44,12 @@
         async function fetchImages() {
             const response = await fetch('/images');
             const images = await response.json();
-            const keyframes = images.map((url, index) => `${(index / images.length) * 100}% { background: url('${url}') no-repeat center center fixed; }`).join(' ');
+            const keyframes = images.map((url, index) => `
+                     ${(index / images.length) * 100}% {
+                        background: url('${url}') no-repeat center center fixed;
+                        background-size: cover;
+                         }
+                    `).join(' ');
             const styleSheet = document.styleSheets[0];
             styleSheet.insertRule(`@keyframes changeBackground { ${keyframes} }`, styleSheet.cssRules.length);
         }

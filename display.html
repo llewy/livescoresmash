@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Score Overlay</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+        }
+        .background {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background-size: cover;
+            animation: changeBackground 30s steps(1, end) infinite;
+        }
+        iframe {
+            position: absolute;
+            top: 80%;
+            left: 10%;
+            width: 40%;
+            height: 40%;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="background"></div>
+    <iframe id="liveScore" src=""></iframe>
+    <script>
+        async function fetchParams() {
+            const response = await fetch('/params');
+            const { pID, wnr } = await response.json();
+            document.getElementById('liveScore').src = `https://www.nttb-ranglijsten.nl/sb/sb_livescore.html?pID=${pID}&wnr=${wnr}&templ=1`;
+        }
+
+        async function fetchImages() {
+            const response = await fetch('/images');
+            const images = await response.json();
+            const keyframes = images.map((url, index) => `${(index / images.length) * 100}% { background: url('${url}') no-repeat center center fixed; }`).join(' ');
+            const styleSheet = document.styleSheets[0];
+            styleSheet.insertRule(`@keyframes changeBackground { ${keyframes} }`, styleSheet.cssRules.length);
+        }
+
+        function setupWebSocket() {
+            const socket = new WebSocket(`ws://${window.location.host}`);
+            socket.onmessage = (event) => {
+                if (event.data === 'refresh') {
+                    fetchParams();
+                    fetchImages();
+                }
+            };
+        }
+
+        fetchParams();
+        fetchImages();
+        setupWebSocket();
+    </script>
+</body>
+</html>

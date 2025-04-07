@@ -8,7 +8,7 @@ const session = require('express-session');
 const cookieParser = require('cookie-parser');
 const app = express();
 const port = 3000;
-const RedisStore = require('connect-redis')(session);
+const RedisStore = require('connect-redis').default;
 const redisClient = require('redis').createClient();
 
 app.use(express.json());

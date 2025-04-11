@@ -65,14 +65,14 @@
           const color = `rgb(${pixel[0]}, ${pixel[1]}, ${pixel[2]})`;
 
           backgroundDiv.style.background = `${color} url('${images[index]}') no-repeat center center fixed`;
-          backgroundDiv.style.backgroundSize = 'cover';
+          backgroundDiv.style.backgroundSize = 'contain';
         };
 
         index = (index + 1) % images.length;
       }
 
       updateBackground(); // Start immediately
-      setInterval(updateBackground, 30000); // Change every 30 seconds
+      setInterval(updateBackground, 8000); // Change every 30 seconds
     }
 
     function setupWebSocket() {

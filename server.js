@@ -28,7 +28,7 @@ cloudinary.config({
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
-let params = { pID: '1022868', wnr: '92207' };
+let params = { pID: '1022898', wnr: '92101' };
 const PASSWORD = process.env.PASSWORD || '1234'; // Use environment variable or default
 
 const wss = new WebSocket.Server({ noServer: true });

@@ -37,31 +37,70 @@
     <iframe id="liveScore" src=""></iframe>
     <script>
         async function fetchParams() {
-            const response = await fetch('/params');
-            const { pID, wnr } = await response.json();
-            document.getElementById('liveScore').src = `https://www.nttb-ranglijsten.nl/sb/sb_livescore.html?pID=${pID}&wnr=${wnr}&templ=5`;
+            try {
+                const response = await fetch('/params');
+                const { pID, wnr } = await response.json();
+                document.getElementById('liveScore').src = `https://www.nttb-ranglijsten.nl/sb/sb_livescore.html?pID=${pID}&wnr=${wnr}&templ=5`;
+            } catch (error) {
+                console.error('Error fetching params:', error);
+            }
         }
 
         async function fetchImages() {
-            const response = await fetch('/images');
-            const images = await response.json();
-            const keyframes = images.map((url, index) => `
+            try {
+                const response = await fetch('/images');
+                const images = await response.json();
+                
+                if (!Array.isArray(images) || images.length === 0) {
+                    console.log('No images available');
+                    return;
+                }
+                
+                const keyframes = images.map((image, index) => {
+                    const url = typeof image === 'string' ? image : image.url;
+                    return `
                      ${(index / images.length) * 100}% {
                         background: url('${url}') no-repeat center center fixed;
                         background-size: contain;
                          }
-                    `).join(' ');
-            const styleSheet = document.styleSheets[0];
-            styleSheet.insertRule(`@keyframes changeBackground { ${keyframes} }`, styleSheet.cssRules.length);
+                    `;
+                }).join(' ');
+                
+                const styleSheet = document.styleSheets[0];
+                // Remove existing animation rule if it exists
+                for (let i = styleSheet.cssRules.length - 1; i >= 0; i--) {
+                    if (styleSheet.cssRules[i].name === 'changeBackground') {
+                        styleSheet.deleteRule(i);
+                        break;
+                    }
+                }
+                styleSheet.insertRule(`@keyframes changeBackground { ${keyframes} }`, styleSheet.cssRules.length);
+            } catch (error) {
+                console.error('Error fetching images:', error);
+            }
         }
 
         function setupWebSocket() {
             const socket = new WebSocket(`ws://${window.location.host}`);
+            
+            socket.onopen = () => {
+                console.log('WebSocket connected');
+            };
+            
             socket.onmessage = (event) => {
                 if (event.data === 'refresh') {
                     fetchParams();
                     fetchImages();
                 }
+            };
+            
+            socket.onclose = () => {
+                console.log('WebSocket disconnected, attempting to reconnect in 5 seconds');
+                setTimeout(setupWebSocket, 5000);
+            };
+            
+            socket.onerror = (error) => {
+                console.error('WebSocket error:', error);
             };
         }
 

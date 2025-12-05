@@ -330,8 +330,8 @@
 </head>
 <body>
     <div class="header">
-        <h1>🎯 Live Score Overlay Manager</h1>
-        <p>Manage your live score display with beautiful image backgrounds</p>
+        <h1>Smash '70 Live Score Overlay Manager</h1>
+        <p>Beheer het livescore display, pas de wedstrijdnummers aan en bewerk afbeeldingen</p>
     </div>
 
     <div class="status-indicator" id="statusIndicator" style="display: none;">
@@ -350,20 +350,20 @@
         <div class="controls-section" id="managementControls">
             <div class="controls-grid">
                 <div class="control-card">
-                    <h3>📊 Score Parameters</h3>
+                    <h3>📊 Wedstrijd Parameters</h3>
                     <div class="input-group">
-                        <label for="pID">Player ID (pID)</label>
+                        <label for="pID">Poule ID (pID)</label>
                         <input type="text" id="pID" placeholder="Enter Player ID">
                     </div>
                     <div class="input-group">
-                        <label for="wnr">Winner ID (wnr)</label>
+                        <label for="wnr">Wedstrijd ID (wnr)</label>
                         <input type="text" id="wnr" placeholder="Enter Winner ID">
                     </div>
                     <button class="btn btn-primary" onclick="updateIframe()">Update Live Score</button>
                 </div>
 
                 <div class="control-card">
-                    <h3>🖼️ Image Upload</h3>
+                    <h3>🖼️ Afbeelding uploaden</h3>
                     <div class="upload-area" onclick="document.getElementById('imageUpload').click()">
                         <div style="font-size: 48px; margin-bottom: 10px;">📁</div>
                         <div>Click to select image or drag & drop</div>
@@ -379,7 +379,7 @@
             </div>
 
             <div class="image-gallery">
-                <h3>🎨 Background Images</h3>
+                <h3>🎨 Achtergrond afbeeldingen</h3>
                 <div id="imageList" class="image-list"></div>
             </div>
         </div>

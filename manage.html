@@ -478,7 +478,7 @@
             <div class="input-group">
                 <input type="password" id="password" placeholder="Enter your password">
             </div>
-            <button class="btn btn-primary" onclick="authenticate()">Login</button>
+            <button class="btn btn-primary" id="loginButton">Login</button>
         </div>
 
         <div class="controls-section" id="managementControls">
@@ -493,12 +493,12 @@
                         <label for="wnr">Wedstrijd ID (wnr)</label>
                         <input type="text" id="wnr" placeholder="Enter Winner ID">
                     </div>
-                    <button class="btn btn-primary" onclick="updateIframe()">Update Live Score</button>
+                    <button class="btn btn-primary" id="updateButton">Update Live Score</button>
                 </div>
 
                 <div class="control-card">
                     <h3>🖼️ Afbeelding uploaden</h3>
-                    <div class="upload-area" onclick="document.getElementById('imageUpload').click()">
+                    <div class="upload-area" id="uploadArea">
                         <div style="font-size: 48px; margin-bottom: 10px;">📁</div>
                         <div>Click to select image or drag & drop</div>
                         <small style="color: #666; margin-top: 10px; display: block;">
@@ -506,7 +506,7 @@
                         </small>
                     </div>
                     <input type="file" id="imageUpload" accept="image/*" style="display: none;">
-                    <button class="btn btn-success" onclick="uploadImage()" style="margin-top: 15px; width: 100%;">
+                    <button class="btn btn-success" id="uploadButton" style="margin-top: 15px; width: 100%;">
                         Upload Image
                     </button>
                 </div>
@@ -526,6 +526,11 @@
         function setupDragAndDrop() {
             const uploadArea = document.querySelector('.upload-area');
             const fileInput = document.getElementById('imageUpload');
+
+            // Add click event listener to upload area
+            uploadArea.addEventListener('click', () => {
+                fileInput.click();
+            });
 
             uploadArea.addEventListener('dragover', (e) => {
                 e.preventDefault();
@@ -573,11 +578,19 @@
             messageEl.className = `message-popup message-${type}`;
             messageEl.innerHTML = `
                 <span>${message}</span>
-                <button onclick="this.parentElement.remove()" style="background: none; border: none; color: white; font-size: 18px; cursor: pointer; padding: 0 0 0 10px;">×</button>
+                <button id="closeMessageBtn" style="background: none; border: none; color: white; font-size: 18px; cursor: pointer; padding: 0 0 0 10px;">×</button>
             `;
             
             // Add to page
             document.body.appendChild(messageEl);
+            
+            // Add event listeners to close button
+            const closeBtn = messageEl.querySelector('#closeMessageBtn');
+            closeBtn.addEventListener('click', () => messageEl.remove());
+            closeBtn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                messageEl.remove();
+            });
             
             // Auto-remove after 5 seconds
             setTimeout(() => {
@@ -792,21 +805,61 @@
                 
                 imageItem.innerHTML = `
                     <img src="${imageUrl}" alt="Background Image ${index + 1}" 
-                         onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjgwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjhmOWZhIiBzdHJva2U9IiNkYzM1NDUiIHN0cm9rZS13aWR0aD0iMiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTYiIGZpbGw9IiNkYzM1NDUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj7inYwgRmFpbGVkIHRvIGxvYWQ8L3RleHQ+PC9zdmc+'; this.alt='Failed to load';"
-                         onclick="confirmDeleteImage('${publicId}')">
+                         onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjgwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjhmOWZhIiBzdHJva2U9IiNkYzM1NDUiIHN0cm9rZS13aWR0aD0iMiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTYiIGZpbGw9IiNkYzM1NDUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj7inYwgRmFpbGVkIHRvIGxvYWQ8L3RleHQ+PC9zdmc+'; this.alt='Failed to load';">
                     <div class="image-controls">
                         <span class="image-position">#${index + 1}</span>
                         <div class="move-buttons">
-                            <button class="btn btn-move" onclick="moveImageUp(${index})" 
+                            <button class="btn btn-move" data-action="up" data-index="${index}" 
                                     ${index === 0 ? 'disabled' : ''}>⬆️ Up</button>
-                            <button class="btn btn-move" onclick="moveImageDown(${index})" 
+                            <button class="btn btn-move" data-action="down" data-index="${index}" 
                                     ${index === imagesToDisplay.length - 1 ? 'disabled' : ''}>⬇️ Down</button>
-                            <button class="btn btn-danger" onclick="confirmDeleteImage('${publicId}')">🗑️ Delete</button>
+                            <button class="btn btn-danger" data-action="delete" data-public-id="${publicId}">🗑️ Delete</button>
                         </div>
                     </div>
                 `;
                 
                 imageList.appendChild(imageItem);
+                
+                // Add event listeners to the buttons in this image item
+                const imageImg = imageItem.querySelector('img');
+                const moveButtons = imageItem.querySelectorAll('.btn-move');
+                const deleteButton = imageItem.querySelector('.btn-danger');
+                
+                // Image click event
+                imageImg.addEventListener('click', () => confirmDeleteImage(publicId));
+                imageImg.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    confirmDeleteImage(publicId);
+                });
+                
+                // Move button events
+                moveButtons.forEach(button => {
+                    const action = button.getAttribute('data-action');
+                    const btnIndex = parseInt(button.getAttribute('data-index'));
+                    
+                    button.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        if (action === 'up') moveImageUp(btnIndex);
+                        if (action === 'down') moveImageDown(btnIndex);
+                    });
+                    
+                    button.addEventListener('touchend', (e) => {
+                        e.preventDefault();
+                        if (action === 'up') moveImageUp(btnIndex);
+                        if (action === 'down') moveImageDown(btnIndex);
+                    });
+                });
+                
+                // Delete button events
+                deleteButton.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    confirmDeleteImage(publicId);
+                });
+                
+                deleteButton.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    confirmDeleteImage(publicId);
+                });
             });
             
             console.log(`Displayed ${imagesToDisplay.length} images`);
@@ -826,10 +879,10 @@
                     <h3>🗑️ Delete Image</h3>
                     <p>Are you sure you want to delete this image?</p>
                     <div class="confirm-buttons">
-                        <button class="btn btn-danger" onclick="deleteImage('${publicId}'); this.closest('.confirm-modal').remove();">
+                        <button class="btn btn-danger" id="confirmDeleteBtn">
                             Delete
                         </button>
-                        <button class="btn" onclick="this.closest('.confirm-modal').remove();" style="background: #6c757d;">
+                        <button class="btn" id="cancelDeleteBtn" style="background: #6c757d;">
                             Cancel
                         </button>
                     </div>
@@ -837,6 +890,34 @@
             `;
             
             document.body.appendChild(modal);
+            
+            // Add event listeners to modal buttons
+            const confirmBtn = modal.querySelector('#confirmDeleteBtn');
+            const cancelBtn = modal.querySelector('#cancelDeleteBtn');
+            
+            // Confirm delete button
+            confirmBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                deleteImage(publicId);
+                modal.remove();
+            });
+            
+            confirmBtn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                deleteImage(publicId);
+                modal.remove();
+            });
+            
+            // Cancel button
+            cancelBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                modal.remove();
+            });
+            
+            cancelBtn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                modal.remove();
+            });
         }
 
         async function deleteImage(publicId) {
@@ -958,6 +1039,9 @@
             const passwordInput = document.getElementById('password');
             const pIDInput = document.getElementById('pID');
             const wnrInput = document.getElementById('wnr');
+            const loginButton = document.getElementById('loginButton');
+            const updateButton = document.getElementById('updateButton');
+            const uploadButton = document.getElementById('uploadButton');
             
             // Prevent zoom on iOS when focusing inputs
             if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
@@ -987,10 +1071,43 @@
                 }
             });
 
-            // Add touch event handling for better mobile responsiveness
-            const loginButton = document.querySelector('.btn-primary');
-            loginButton.addEventListener('touchstart', () => {
+            // Add proper event listeners for login button (mobile-friendly)
+            loginButton.addEventListener('click', (e) => {
+                e.preventDefault();
+                console.log('Login button clicked');
+                authenticate();
+            });
+            
+            loginButton.addEventListener('touchend', (e) => {
+                e.preventDefault();
                 console.log('Login button touched');
+                authenticate();
+            });
+
+            // Add proper event listeners for update button (mobile-friendly)
+            updateButton.addEventListener('click', (e) => {
+                e.preventDefault();
+                console.log('Update button clicked');
+                updateIframe();
+            });
+            
+            updateButton.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                console.log('Update button touched');
+                updateIframe();
+            });
+
+            // Add proper event listeners for upload button (mobile-friendly)
+            uploadButton.addEventListener('click', (e) => {
+                e.preventDefault();
+                console.log('Upload button clicked');
+                uploadImage();
+            });
+            
+            uploadButton.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                console.log('Upload button touched');
+                uploadImage();
             });
 
             console.log('Mobile compatibility setup complete');

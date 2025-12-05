@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Live Score Overlay Manager</title>
     <style>
         * {
@@ -285,6 +285,115 @@
             background: linear-gradient(45deg, #fc4a1a 0%, #f7b733 100%);
         }
 
+        .message-popup {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            left: 20px;
+            max-width: 400px;
+            margin: 0 auto;
+            padding: 15px 20px;
+            border-radius: 12px;
+            color: white;
+            font-weight: 600;
+            z-index: 2000;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+            animation: slideInDown 0.3s ease-out;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .message-success {
+            background: linear-gradient(45deg, #56ab2f 0%, #a8e6cf 100%);
+        }
+
+        .message-error {
+            background: linear-gradient(45deg, #fc4a1a 0%, #f7b733 100%);
+        }
+
+        .message-info {
+            background: linear-gradient(45deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        @keyframes slideInDown {
+            from {
+                transform: translateY(-100px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .message-popup {
+                top: 10px;
+                right: 10px;
+                left: 10px;
+                max-width: none;
+            }
+        }
+
+        .confirm-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 3000;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .confirm-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+            animation: slideInUp 0.3s ease-out;
+        }
+
+        .confirm-content h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .confirm-content p {
+            margin-bottom: 25px;
+            color: #666;
+            line-height: 1.5;
+        }
+
+        .confirm-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .confirm-buttons .btn {
+            flex: 1;
+            max-width: 120px;
+        }
+
+        @keyframes slideInUp {
+            from {
+                transform: translateY(50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
         .upload-area {
             border: 2px dashed #667eea;
             border-radius: 12px;
@@ -324,6 +433,31 @@
             
             .header h1 {
                 font-size: 2em;
+            }
+
+            .btn {
+                padding: 18px 25px; /* Larger touch targets for mobile */
+                font-size: 18px;
+            }
+
+            .btn-move, .btn-danger {
+                padding: 12px 18px;
+                font-size: 16px;
+                min-width: 80px;
+            }
+
+            input[type="text"], input[type="password"] {
+                padding: 18px; /* Larger touch targets */
+                font-size: 18px; /* Prevent zoom on iOS */
+            }
+
+            .upload-area {
+                padding: 25px;
+            }
+
+            .move-buttons {
+                flex-wrap: wrap;
+                gap: 8px;
             }
         }
     </style>
@@ -427,12 +561,44 @@
             statusText.textContent = text;
         }
 
+        function showMessage(message, type = 'info') {
+            // Remove any existing message
+            const existingMessage = document.querySelector('.message-popup');
+            if (existingMessage) {
+                existingMessage.remove();
+            }
+            
+            // Create message element
+            const messageEl = document.createElement('div');
+            messageEl.className = `message-popup message-${type}`;
+            messageEl.innerHTML = `
+                <span>${message}</span>
+                <button onclick="this.parentElement.remove()" style="background: none; border: none; color: white; font-size: 18px; cursor: pointer; padding: 0 0 0 10px;">×</button>
+            `;
+            
+            // Add to page
+            document.body.appendChild(messageEl);
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                if (messageEl.parentElement) {
+                    messageEl.remove();
+                }
+            }, 5000);
+        }
+
         function authenticate() {
             const password = document.getElementById('password').value;
             if (!password) {
-                alert('Please enter a password.');
+                showMessage('Please enter a password.', 'error');
                 return;
             }
+            
+            // Show loading state
+            const loginButton = document.querySelector('.btn-primary');
+            const originalText = loginButton.textContent;
+            loginButton.textContent = 'Logging in...';
+            loginButton.disabled = true;
             
             fetch('/authenticate', {
                 method: 'POST',
@@ -450,15 +616,21 @@
                     fetchCurrentParams();
                     setupWebSocket();
                     setupDragAndDrop();
+                    showMessage('Login successful!', 'success');
                 } else {
-                    alert('Incorrect password. Please try again.');
+                    showMessage('Incorrect password. Please try again.', 'error');
                     document.getElementById('password').value = '';
                     console.log('Authentication failed');
                 }
             })
             .catch(error => {
                 console.error('Authentication error:', error);
-                alert('Authentication failed. Please try again.');
+                showMessage('Authentication failed. Please check your connection and try again.', 'error');
+            })
+            .finally(() => {
+                // Reset button state
+                loginButton.textContent = originalText;
+                loginButton.disabled = false;
             });
         }
 
@@ -494,7 +666,7 @@
             const wnr = document.getElementById('wnr').value.trim();
             
             if (!pID || !wnr) {
-                alert('Please enter both Player ID and Winner ID.');
+                showMessage('Please enter both Player ID and Winner ID.', 'error');
                 return;
             }
             
@@ -505,12 +677,12 @@
             })
             .then(response => response.json())
             .then(data => {
-                alert('Live score parameters updated successfully!');
+                showMessage('Live score parameters updated successfully!', 'success');
                 console.log('Parameters updated:', data);
             })
             .catch(error => {
                 console.error('Error updating parameters:', error);
-                alert('Failed to update parameters. Please try again.');
+                showMessage('Failed to update parameters. Please try again.', 'error');
             });
         }
 
@@ -518,18 +690,18 @@
             try {
                 const fileInput = document.getElementById('imageUpload');
                 if (!fileInput.files[0]) {
-                    alert('Please select an image file to upload.');
+                    showMessage('Please select an image file to upload.', 'error');
                     return;
                 }
                 
                 const file = fileInput.files[0];
                 if (!file.type.startsWith('image/')) {
-                    alert('Please select a valid image file.');
+                    showMessage('Please select a valid image file.', 'error');
                     return;
                 }
                 
                 if (file.size > 10 * 1024 * 1024) { // 10MB limit
-                    alert('File size must be less than 10MB.');
+                    showMessage('File size must be less than 10MB.', 'error');
                     return;
                 }
                 
@@ -549,7 +721,7 @@
                 
                 if (!response.ok) {
                     const error = await response.json();
-                    alert(`Upload failed: ${error.error || 'Unknown error'}`);
+                    showMessage(`Upload failed: ${error.error || 'Unknown error'}`, 'error');
                     return;
                 }
                 
@@ -561,11 +733,11 @@
                 
                 // Refresh images after upload
                 fetchImages();
-                alert('Image uploaded successfully!');
+                showMessage('Image uploaded successfully!', 'success');
                 
             } catch (error) {
                 console.error('Upload error:', error);
-                alert('Upload failed. Please try again.');
+                showMessage('Upload failed. Please try again.', 'error');
             } finally {
                 // Reset upload button
                 const uploadButton = document.querySelector('.btn-success');
@@ -641,9 +813,30 @@
         }
 
         function confirmDeleteImage(publicId) {
-            if (confirm('Are you sure you want to delete this image?')) {
-                deleteImage(publicId);
+            // Create custom confirmation modal instead of browser confirm()
+            const existingModal = document.querySelector('.confirm-modal');
+            if (existingModal) {
+                existingModal.remove();
             }
+            
+            const modal = document.createElement('div');
+            modal.className = 'confirm-modal';
+            modal.innerHTML = `
+                <div class="confirm-content">
+                    <h3>🗑️ Delete Image</h3>
+                    <p>Are you sure you want to delete this image?</p>
+                    <div class="confirm-buttons">
+                        <button class="btn btn-danger" onclick="deleteImage('${publicId}'); this.closest('.confirm-modal').remove();">
+                            Delete
+                        </button>
+                        <button class="btn" onclick="this.closest('.confirm-modal').remove();" style="background: #6c757d;">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
         }
 
         async function deleteImage(publicId) {
@@ -654,7 +847,7 @@
                 
                 if (!response.ok) {
                     const error = await response.json();
-                    alert(`Delete failed: ${error.error || 'Unknown error'}`);
+                    showMessage(`Delete failed: ${error.error || 'Unknown error'}`, 'error');
                     return;
                 }
                 
@@ -662,9 +855,10 @@
                 console.log('Delete successful, refreshed images:', updatedImages);
                 images = updatedImages;
                 displayImages(updatedImages);
+                showMessage('Image deleted successfully', 'success');
             } catch (error) {
                 console.error('Delete error:', error);
-                alert('Delete failed. Please try again.');
+                showMessage('Delete failed. Please try again.', 'error');
             }
         }
 
@@ -757,19 +951,49 @@
             }
         }
 
-        // Allow Enter key to submit forms
+        // Allow Enter key to submit forms and add mobile event handling
         document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('password').addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') authenticate();
+            console.log('DOM loaded, setting up mobile compatibility...');
+            
+            const passwordInput = document.getElementById('password');
+            const pIDInput = document.getElementById('pID');
+            const wnrInput = document.getElementById('wnr');
+            
+            // Prevent zoom on iOS when focusing inputs
+            if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+                console.log('iOS detected, applying mobile fixes');
+                document.body.style.webkitTextSizeAdjust = '100%';
+            }
+            
+            passwordInput.addEventListener('keypress', (e) => {
+                console.log('Key pressed in password field:', e.key);
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    authenticate();
+                }
             });
             
-            document.getElementById('pID').addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') updateIframe();
+            pIDInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    updateIframe();
+                }
             });
             
-            document.getElementById('wnr').addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') updateIframe();
+            wnrInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    updateIframe();
+                }
             });
+
+            // Add touch event handling for better mobile responsiveness
+            const loginButton = document.querySelector('.btn-primary');
+            loginButton.addEventListener('touchstart', () => {
+                console.log('Login button touched');
+            });
+
+            console.log('Mobile compatibility setup complete');
         });
 
         // Check authentication status on page load

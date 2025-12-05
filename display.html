@@ -58,6 +58,30 @@
         .status-connecting {
             background: linear-gradient(45deg, #4facfe 0%, #00f2fe 100%);
         }
+
+        /* Google TV specific optimizations */
+        .debug-info {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            max-width: 300px;
+            display: none;
+            z-index: 2000;
+        }
+
+        /* Ensure animations work on lower-powered devices */
+        @media (max-width: 1920px) {
+            .background {
+                will-change: background-image;
+                backface-visibility: hidden;
+            }
+        }
     </style>
 </head>
 <body>
@@ -66,6 +90,7 @@
     <div class="status-indicator status-connecting" id="statusIndicator">
         <span id="statusText">🔄 Connecting...</span>
     </div>
+    <div class="debug-info" id="debug-info"></div>
     <script>
         // Configuration
         const CONFIG = {
@@ -74,17 +99,41 @@
             MAX_DISPLAY_TIME: 30   // Maximum display time per image
         };
 
+        // Google TV compatibility check
+        function isGoogleTV() {
+            const userAgent = navigator.userAgent.toLowerCase();
+            return userAgent.includes('googletv') || 
+                   userAgent.includes('android tv') ||
+                   userAgent.includes('chrome os');
+        }
+
+        // Enhanced logging for Google TV debugging
+        function log(message, data) {
+            console.log('[LiveScore]', message, data || '');
+            // For Google TV debugging, you might also want to show visual feedback
+            if (isGoogleTV()) {
+                const debug = document.getElementById('debug-info');
+                if (debug) {
+                    debug.textContent = message + (data ? ': ' + JSON.stringify(data) : '');
+                }
+            }
+        }
+
         function updateStatus(status, text) {
             const indicator = document.getElementById('statusIndicator');
             const statusText = document.getElementById('statusText');
-            indicator.className = `status-indicator ${status}`;
+            if (!indicator || !statusText) return;
+            
+            indicator.className = 'status-indicator ' + status;
             statusText.textContent = text;
+            
+            log('Status updated', status + ': ' + text);
             
             // Auto-hide after 5 seconds if connected
             if (status === 'status-connected') {
-                setTimeout(() => {
+                setTimeout(function() {
                     indicator.style.opacity = '0.7';
-                    setTimeout(() => {
+                    setTimeout(function() {
                         indicator.style.display = 'none';
                     }, 3000);
                 }, 5000);
@@ -95,13 +144,43 @@
             }
         }
 
-        async function fetchParams() {
-            try {
-                const response = await fetch('/params');
-                const { pID, wnr } = await response.json();
-                document.getElementById('liveScore').src = `https://www.nttb-ranglijsten.nl/sb/sb_livescore.html?pID=${pID}&wnr=${wnr}&templ=5`;
-            } catch (error) {
-                console.error('Error fetching params:', error);
+        function fetchParams() {
+            log('Fetching parameters...');
+            
+            // Use XMLHttpRequest for better Google TV compatibility
+            if (window.fetch) {
+                // Modern browsers (including recent Google TV)
+                return fetch('/params')
+                    .then(function(response) {
+                        return response.json();
+                    })
+                    .then(function(data) {
+                        var pID = data.pID;
+                        var wnr = data.wnr;
+                        var iframe = document.getElementById('liveScore');
+                        iframe.src = 'https://www.nttb-ranglijsten.nl/sb/sb_livescore.html?pID=' + pID + '&wnr=' + wnr + '&templ=5';
+                        log('Parameters loaded', {pID: pID, wnr: wnr});
+                    })
+                    .catch(function(error) {
+                        log('Error fetching params', error.message);
+                    });
+            } else {
+                // Fallback for older browsers
+                var xhr = new XMLHttpRequest();
+                xhr.open('GET', '/params', true);
+                xhr.onreadystatechange = function() {
+                    if (xhr.readyState === 4 && xhr.status === 200) {
+                        try {
+                            var data = JSON.parse(xhr.responseText);
+                            var iframe = document.getElementById('liveScore');
+                            iframe.src = 'https://www.nttb-ranglijsten.nl/sb/sb_livescore.html?pID=' + data.pID + '&wnr=' + data.wnr + '&templ=5';
+                            log('Parameters loaded (XHR)', data);
+                        } catch (e) {
+                            log('Error parsing params', e.message);
+                        }
+                    }
+                };
+                xhr.send();
             }
         }
 

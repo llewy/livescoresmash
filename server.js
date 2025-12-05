@@ -102,6 +102,9 @@ let params = {
 };
 const PASSWORD = process.env.PASSWORD || '1234'; // Use environment variable or default
 
+// Image order storage (in production, this should be in a database)
+let imageOrder = []; // Array of public_ids in display order
+
 // Input validation functions
 function validateParams(pID, wnr) {
     const pIDRegex = /^\d+$/;
@@ -145,11 +148,39 @@ async function loadImages() {
             prefix: 'uploads/',
             max_results: 500 // Limit results for performance
         });
-        console.log(`Loaded ${resources.resources.length} images`);
-        return resources.resources.map(resource => ({
+        console.log(`Loaded ${resources.resources.length} images from Cloudinary`);
+        
+        const images = resources.resources.map(resource => ({
             url: resource.secure_url,
             public_id: resource.public_id.replace('uploads/', '')
         }));
+        
+        // Apply custom ordering if exists
+        if (imageOrder.length > 0) {
+            const orderedImages = [];
+            const imageMap = new Map(images.map(img => [img.public_id, img]));
+            
+            // Add images in the specified order
+            imageOrder.forEach(publicId => {
+                if (imageMap.has(publicId)) {
+                    orderedImages.push(imageMap.get(publicId));
+                    imageMap.delete(publicId);
+                }
+            });
+            
+            // Add any new images that aren't in the order yet
+            imageMap.forEach(image => {
+                orderedImages.push(image);
+                imageOrder.push(image.public_id); // Add to order for next time
+            });
+            
+            console.log(`Applied custom ordering: ${imageOrder.join(', ')}`);
+            return orderedImages;
+        }
+        
+        // No custom order, initialize order array
+        imageOrder = images.map(img => img.public_id);
+        return images;
     } catch (error) {
         console.error('Error loading images:', error);
         throw new Error('Failed to load images from Cloudinary');
@@ -203,11 +234,19 @@ app.post('/upload', uploadLimiter, requireAuth, upload.single('image'), async (r
             ).end(req.file.buffer);
         });
         
-        console.log('Uploaded image:', result.public_id);
+        const cleanPublicId = result.public_id.replace('uploads/', '');
+        console.log('Uploaded image:', cleanPublicId);
+        
+        // Add to image order (at the end by default)
+        if (!imageOrder.includes(cleanPublicId)) {
+            imageOrder.push(cleanPublicId);
+            console.log(`Added ${cleanPublicId} to image order`);
+        }
+        
         broadcast('refresh');
         res.json({ 
             url: result.secure_url,
-            public_id: result.public_id.replace('uploads/', '')
+            public_id: cleanPublicId
         });
     } catch (error) {
         console.error('Error uploading image:', error);
@@ -224,6 +263,14 @@ app.delete('/images/:public_id', requireAuth, async (req, res) => {
 
         console.log('Deleting image:', publicId);
         await cloudinary.uploader.destroy(`uploads/${publicId}`);
+        
+        // Remove from image order
+        const index = imageOrder.indexOf(publicId);
+        if (index > -1) {
+            imageOrder.splice(index, 1);
+            console.log(`Removed ${publicId} from image order`);
+        }
+        
         broadcast('refresh');
         const images = await loadImages();
         res.json(images);
@@ -235,9 +282,27 @@ app.delete('/images/:public_id', requireAuth, async (req, res) => {
 
 app.post('/images/move', requireAuth, async (req, res) => {
     try {
-        // Cloudinary does not support reordering images directly
-        // This endpoint is kept for compatibility but doesn't perform actual reordering
+        const { fromIndex, toIndex } = req.body;
+        
+        if (typeof fromIndex !== 'number' || typeof toIndex !== 'number') {
+            return res.status(400).json({ error: 'fromIndex and toIndex must be numbers' });
+        }
+        
+        if (fromIndex < 0 || toIndex < 0 || fromIndex >= imageOrder.length || toIndex >= imageOrder.length) {
+            return res.status(400).json({ error: 'Invalid index values' });
+        }
+        
+        // Move the item in the order array
+        const [movedItem] = imageOrder.splice(fromIndex, 1);
+        imageOrder.splice(toIndex, 0, movedItem);
+        
+        console.log(`Moved image from position ${fromIndex} to ${toIndex}`);
+        console.log(`New order: ${imageOrder.join(', ')}`);
+        
+        // Broadcast to all connected clients
         broadcast('refresh');
+        
+        // Return the reordered images
         const images = await loadImages();
         res.json(images);
     } catch (error) {

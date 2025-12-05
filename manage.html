@@ -670,25 +670,49 @@
 
         function moveImageUp(index) {
             if (index > 0) {
-                const newImages = [...images];
-                [newImages[index], newImages[index - 1]] = [newImages[index - 1], newImages[index]];
-                images = newImages;
-                displayImages(newImages);
-                // Note: Since Cloudinary doesn't support reordering, this is just a visual change
-                // The order will reset on next refresh from server
-                console.log(`Moved image from position ${index + 1} to ${index}`);
+                moveImageToPosition(index, index - 1);
             }
         }
 
         function moveImageDown(index) {
             if (index < images.length - 1) {
+                moveImageToPosition(index, index + 1);
+            }
+        }
+
+        async function moveImageToPosition(fromIndex, toIndex) {
+            try {
+                // Update local array immediately for responsive UI
                 const newImages = [...images];
-                [newImages[index], newImages[index + 1]] = [newImages[index + 1], newImages[index]];
+                [newImages[fromIndex], newImages[toIndex]] = [newImages[toIndex], newImages[fromIndex]];
                 images = newImages;
                 displayImages(newImages);
-                // Note: Since Cloudinary doesn't support reordering, this is just a visual change
-                // The order will reset on next refresh from server
-                console.log(`Moved image from position ${index + 1} to ${index + 2}`);
+                
+                // Send request to server to persist the change
+                const response = await fetch('/images/move', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ fromIndex, toIndex })
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    console.error(`Move operation failed: ${error.error || 'Unknown error'}`);
+                    // Revert the local change if server request failed
+                    fetchImages();
+                    return;
+                }
+                
+                const updatedImages = await response.json();
+                console.log(`Successfully moved image from position ${fromIndex + 1} to ${toIndex + 1}`);
+                // Update with server response to ensure consistency
+                images = updatedImages;
+                displayImages(updatedImages);
+                
+            } catch (error) {
+                console.error('Move error:', error);
+                // Revert the local change if there was an error
+                fetchImages();
             }
         }
 

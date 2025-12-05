@@ -3,113 +3,429 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manage Live Score Overlay</title>
+    <title>Live Score Overlay Manager</title>
     <style>
-        body, html {
+        * {
             margin: 0;
-            padding: 20px;
-            font-family: Arial, sans-serif;
-            background-color: #f0f0f0;
+            padding: 0;
+            box-sizing: border-box;
         }
-        h1 {
-            text-align: center;
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
             color: #333;
         }
-        .controls {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            max-width: 800px;
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: white;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            color: rgba(255,255,255,0.9);
+            font-size: 1.1em;
+        }
+
+        .container {
+            max-width: 1200px;
             margin: 0 auto;
-            background-color: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
         }
-        input[type="text"], input[type="file"], input[type="password"] {
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            width: 90%;
+
+        .login-section {
+            padding: 40px;
+            text-align: center;
+            background: linear-gradient(45deg, #f093fb 0%, #f5576c 100%);
         }
-        button {
-            padding: 10px;
-            border: none;
-            border-radius: 4px;
-            background-color: #007BFF;
-            color: #fff;
-            cursor: pointer;
+
+        .login-section h2 {
+            color: white;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        input[type="text"], input[type="password"], input[type="file"] {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 12px;
             font-size: 16px;
+            transition: all 0.3s ease;
+            background: white;
         }
-        button:hover {
-            background-color: #0056b3;
+
+        input[type="text"]:focus, input[type="password"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
-        .image-list {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-top: 20px;
-        }
-        .image-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        .image-item img {
-            width: 225px; /* Increased width */
-            height: 150px; /* Fixed height for consistency */
-            object-fit: cover; /* Maintain aspect ratio */
-            border-radius: 4px;
+
+        .btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
             cursor: pointer;
-            transition: transform 0.3s;
-            border: 2px solid transparent;
+            transition: all 0.3s ease;
+            display: inline-block;
+            text-decoration: none;
+            min-width: 120px;
         }
-        .image-item img:hover {
-            transform: scale(1.1);
-            border-color: #007BFF;
+
+        .btn-primary {
+            background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
+            color: white;
         }
-        .image-item img.error {
-            border-color: #dc3545;
-            background-color: #f8f9fa;
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
         }
-        .image-item button {
-            margin-top: 5px;
-            padding: 5px;
+
+        .btn-success {
+            background: linear-gradient(45deg, #56ab2f 0%, #a8e6cf 100%);
+            color: white;
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(86, 171, 47, 0.4);
+        }
+
+        .btn-danger {
+            background: linear-gradient(45deg, #fc4a1a 0%, #f7b733 100%);
+            color: white;
+            padding: 8px 16px;
             font-size: 14px;
+            min-width: auto;
         }
+
+        .btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(252, 74, 26, 0.4);
+        }
+
+        .btn-move {
+            background: linear-gradient(45deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 8px 16px;
+            font-size: 14px;
+            min-width: auto;
+            margin: 2px;
+        }
+
+        .btn-move:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(79, 172, 254, 0.4);
+        }
+
+        .btn-move:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .controls-section {
+            padding: 40px;
+            display: none;
+        }
+
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .control-card {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+            border: 1px solid #e9ecef;
+        }
+
+        .control-card h3 {
+            margin-bottom: 20px;
+            color: #495057;
+            font-size: 1.3em;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .image-gallery {
+            margin-top: 40px;
+        }
+
+        .image-gallery h3 {
+            margin-bottom: 20px;
+            color: #495057;
+            font-size: 1.5em;
+            text-align: center;
+        }
+
+        .image-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+            padding: 20px 0;
+        }
+
+        .image-item {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+            position: relative;
+        }
+
+        .image-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        }
+
+        .image-item img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        .image-item img:hover {
+            transform: scale(1.05);
+        }
+
+        .image-controls {
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f8f9fa;
+        }
+
+        .image-position {
+            font-weight: 600;
+            color: #6c757d;
+        }
+
+        .move-buttons {
+            display: flex;
+            gap: 5px;
+        }
+
+        .loading, .error-message, .no-images {
+            text-align: center;
+            padding: 40px;
+            border-radius: 15px;
+            margin: 20px 0;
+        }
+
         .loading {
-            text-align: center;
-            color: #666;
-            font-style: italic;
-            padding: 20px;
+            background: #e3f2fd;
+            color: #1976d2;
+            border: 1px solid #bbdefb;
         }
+
         .error-message {
-            color: #dc3545;
+            background: #ffebee;
+            color: #c62828;
+            border: 1px solid #ffcdd2;
+        }
+
+        .no-images {
+            background: #f3e5f5;
+            color: #7b1fa2;
+            border: 1px solid #e1bee7;
+        }
+
+        .status-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            border-radius: 25px;
+            color: white;
+            font-weight: 600;
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+
+        .status-connected {
+            background: linear-gradient(45deg, #56ab2f 0%, #a8e6cf 100%);
+        }
+
+        .status-disconnected {
+            background: linear-gradient(45deg, #fc4a1a 0%, #f7b733 100%);
+        }
+
+        .upload-area {
+            border: 2px dashed #667eea;
+            border-radius: 12px;
+            padding: 30px;
             text-align: center;
-            padding: 10px;
-            background-color: #f8d7da;
-            border: 1px solid #f5c6cb;
-            border-radius: 4px;
-            margin: 10px 0;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: rgba(102, 126, 234, 0.05);
+        }
+
+        .upload-area.dragover {
+            border-color: #56ab2f;
+            background: rgba(86, 171, 47, 0.1);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @media (max-width: 768px) {
+            .controls-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .image-list {
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
         }
     </style>
 </head>
 <body>
-    <h1>Manage Live Score Overlay</h1>
-    <div class="controls">
-        <input type="password" id="password" placeholder="Enter password">
-        <button onclick="authenticate()">Login</button>
-        <div id="managementControls" style="display: none;">
-            <input type="text" id="pID" placeholder="Enter pID">
-            <input type="text" id="wnr" placeholder="Enter wnr">
-            <button onclick="updateIframe()">Update Live Score</button>
-            <input type="file" id="imageUpload" accept="image/*">
-            <button onclick="uploadImage()">Upload Image</button>
-            <div id="imageList" class="image-list"></div>
+    <div class="header">
+        <h1>🎯 Live Score Overlay Manager</h1>
+        <p>Manage your live score display with beautiful image backgrounds</p>
+    </div>
+
+    <div class="status-indicator" id="statusIndicator" style="display: none;">
+        <span id="statusText">Disconnected</span>
+    </div>
+
+    <div class="container fade-in">
+        <div class="login-section" id="loginSection">
+            <h2>🔐 Authentication Required</h2>
+            <div class="input-group">
+                <input type="password" id="password" placeholder="Enter your password">
+            </div>
+            <button class="btn btn-primary" onclick="authenticate()">Login</button>
+        </div>
+
+        <div class="controls-section" id="managementControls">
+            <div class="controls-grid">
+                <div class="control-card">
+                    <h3>📊 Score Parameters</h3>
+                    <div class="input-group">
+                        <label for="pID">Player ID (pID)</label>
+                        <input type="text" id="pID" placeholder="Enter Player ID">
+                    </div>
+                    <div class="input-group">
+                        <label for="wnr">Winner ID (wnr)</label>
+                        <input type="text" id="wnr" placeholder="Enter Winner ID">
+                    </div>
+                    <button class="btn btn-primary" onclick="updateIframe()">Update Live Score</button>
+                </div>
+
+                <div class="control-card">
+                    <h3>🖼️ Image Upload</h3>
+                    <div class="upload-area" onclick="document.getElementById('imageUpload').click()">
+                        <div style="font-size: 48px; margin-bottom: 10px;">📁</div>
+                        <div>Click to select image or drag & drop</div>
+                        <small style="color: #666; margin-top: 10px; display: block;">
+                            Supports JPG, PNG, GIF (Max 10MB)
+                        </small>
+                    </div>
+                    <input type="file" id="imageUpload" accept="image/*" style="display: none;">
+                    <button class="btn btn-success" onclick="uploadImage()" style="margin-top: 15px; width: 100%;">
+                        Upload Image
+                    </button>
+                </div>
+            </div>
+
+            <div class="image-gallery">
+                <h3>🎨 Background Images</h3>
+                <div id="imageList" class="image-list"></div>
+            </div>
         </div>
     </div>
     <script>
         let socket;
+        let images = []; // Store current images array for reordering
+
+        // Drag and drop functionality
+        function setupDragAndDrop() {
+            const uploadArea = document.querySelector('.upload-area');
+            const fileInput = document.getElementById('imageUpload');
+
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('dragover');
+            });
+
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files.length > 0 && files[0].type.startsWith('image/')) {
+                    fileInput.files = files;
+                    uploadImage();
+                }
+            });
+
+            fileInput.addEventListener('change', () => {
+                if (fileInput.files[0]) {
+                    uploadImage();
+                }
+            });
+        }
+
+        function updateStatus(status, text) {
+            const indicator = document.getElementById('statusIndicator');
+            const statusText = document.getElementById('statusText');
+            indicator.style.display = 'block';
+            indicator.className = `status-indicator ${status}`;
+            statusText.textContent = text;
+        }
 
         function authenticate() {
             const password = document.getElementById('password').value;
@@ -126,14 +442,17 @@
             .then(response => response.json())
             .then(data => {
                 if (data.authenticated) {
+                    document.getElementById('loginSection').style.display = 'none';
                     document.getElementById('managementControls').style.display = 'block';
-                    document.getElementById('password').style.display = 'none';
-                    document.querySelector('button[onclick="authenticate()"]').style.display = 'none';
+                    document.getElementById('managementControls').classList.add('fade-in');
                     console.log('Authentication successful');
-                    fetchImages(); // Fetch images when authenticated
-                    setupWebSocket(); // Setup WebSocket after authentication
+                    fetchImages();
+                    fetchCurrentParams();
+                    setupWebSocket();
+                    setupDragAndDrop();
                 } else {
                     alert('Incorrect password. Please try again.');
+                    document.getElementById('password').value = '';
                     console.log('Authentication failed');
                 }
             })
@@ -148,22 +467,50 @@
             .then(response => response.json())
             .then(data => {
                 if (data.authenticated) {
+                    document.getElementById('loginSection').style.display = 'none';
                     document.getElementById('managementControls').style.display = 'block';
-                    document.getElementById('password').style.display = 'none';
-                    document.querySelector('button[onclick="authenticate()"]').style.display = 'none';
-                    fetchImages(); // Fetch images when authenticated
-                    setupWebSocket(); // Setup WebSocket after authentication
+                    fetchImages();
+                    fetchCurrentParams();
+                    setupWebSocket();
+                    setupDragAndDrop();
                 }
             });
         }
 
+        function fetchCurrentParams() {
+            fetch('/params')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('pID').value = data.pID || '';
+                document.getElementById('wnr').value = data.wnr || '';
+            })
+            .catch(error => {
+                console.error('Error fetching current params:', error);
+            });
+        }
+
         function updateIframe() {
-            const pID = document.getElementById('pID').value;
-            const wnr = document.getElementById('wnr').value;
+            const pID = document.getElementById('pID').value.trim();
+            const wnr = document.getElementById('wnr').value.trim();
+            
+            if (!pID || !wnr) {
+                alert('Please enter both Player ID and Winner ID.');
+                return;
+            }
+            
             fetch('/update-params', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ pID, wnr })
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert('Live score parameters updated successfully!');
+                console.log('Parameters updated:', data);
+            })
+            .catch(error => {
+                console.error('Error updating parameters:', error);
+                alert('Failed to update parameters. Please try again.');
             });
         }
 
@@ -175,8 +522,26 @@
                     return;
                 }
                 
+                const file = fileInput.files[0];
+                if (!file.type.startsWith('image/')) {
+                    alert('Please select a valid image file.');
+                    return;
+                }
+                
+                if (file.size > 10 * 1024 * 1024) { // 10MB limit
+                    alert('File size must be less than 10MB.');
+                    return;
+                }
+                
                 const formData = new FormData();
-                formData.append('image', fileInput.files[0]);
+                formData.append('image', file);
+                
+                // Show upload progress
+                const uploadButton = document.querySelector('.btn-success');
+                const originalText = uploadButton.textContent;
+                uploadButton.textContent = 'Uploading...';
+                uploadButton.disabled = true;
+                
                 const response = await fetch('/upload', {
                     method: 'POST',
                     body: formData
@@ -196,84 +561,83 @@
                 
                 // Refresh images after upload
                 fetchImages();
+                alert('Image uploaded successfully!');
+                
             } catch (error) {
                 console.error('Upload error:', error);
                 alert('Upload failed. Please try again.');
+            } finally {
+                // Reset upload button
+                const uploadButton = document.querySelector('.btn-success');
+                uploadButton.textContent = 'Upload Image';
+                uploadButton.disabled = false;
             }
         }
 
         async function fetchImages() {
             try {
                 const imageList = document.getElementById('imageList');
-                imageList.innerHTML = '<div class="loading">Loading images...</div>';
+                imageList.innerHTML = '<div class="loading">📸 Loading images...</div>';
                 
                 const response = await fetch('/images');
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
-                const images = await response.json();
-                console.log('Fetched images:', images);
-                displayImages(images);
+                const fetchedImages = await response.json();
+                console.log('Fetched images:', fetchedImages);
+                images = fetchedImages; // Store for reordering
+                displayImages(fetchedImages);
             } catch (error) {
                 console.error('Error fetching images:', error);
                 const imageList = document.getElementById('imageList');
-                imageList.innerHTML = `<div class="error-message">Failed to load images: ${error.message}</div>`;
+                imageList.innerHTML = `<div class="error-message">❌ Failed to load images: ${error.message}</div>`;
             }
         }
 
-        function displayImages(images) {
+        function displayImages(imagesToDisplay) {
             const imageList = document.getElementById('imageList');
             imageList.innerHTML = '';
             
-            if (!Array.isArray(images)) {
-                console.error('Images is not an array:', images);
-                imageList.innerHTML = '<div class="error-message">Invalid image data received from server</div>';
+            if (!Array.isArray(imagesToDisplay)) {
+                console.error('Images is not an array:', imagesToDisplay);
+                imageList.innerHTML = '<div class="error-message">❌ Invalid image data received from server</div>';
                 return;
             }
             
-            if (images.length === 0) {
-                imageList.innerHTML = '<div class="loading">No images uploaded yet. Upload your first image above!</div>';
+            if (imagesToDisplay.length === 0) {
+                imageList.innerHTML = '<div class="no-images">📷 No images uploaded yet.<br><small>Upload your first image above to get started!</small></div>';
                 return;
             }
             
-            images.forEach((image, index) => {
-                // Handle both old format (string URLs) and new format (objects with url/public_id)
+            imagesToDisplay.forEach((image, index) => {
                 const imageUrl = typeof image === 'string' ? image : image.url;
                 const publicId = typeof image === 'string' 
-                    ? image.split('/').pop().split('.')[0] // Extract from URL for backward compatibility
+                    ? image.split('/').pop().split('.')[0]
                     : image.public_id;
                 
-                console.log(`Image ${index + 1}:`, { imageUrl, publicId });
-                
                 const imageItem = document.createElement('div');
-                imageItem.className = 'image-item';
+                imageItem.className = 'image-item fade-in';
                 
-                const img = document.createElement('img');
-                img.src = imageUrl;
-                img.alt = `Image ${index + 1}`;
-                img.onerror = () => {
-                    console.error('Failed to load image:', imageUrl);
-                    img.classList.add('error');
-                    img.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjI1IiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjhmOWZhIiBzdHJva2U9IiNkYzM1NDUiIHN0cm9rZS13aWR0aD0iMiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiNkYzM1NDUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5GYWlsZWQgdG8gbG9hZDwvdGV4dD48L3N2Zz4=';
-                    img.alt = 'Failed to load image';
-                };
-                img.onclick = () => confirmDeleteImage(publicId);
+                imageItem.innerHTML = `
+                    <img src="${imageUrl}" alt="Background Image ${index + 1}" 
+                         onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjgwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjhmOWZhIiBzdHJva2U9IiNkYzM1NDUiIHN0cm9rZS13aWR0aD0iMiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTYiIGZpbGw9IiNkYzM1NDUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj7inYwgRmFpbGVkIHRvIGxvYWQ8L3RleHQ+PC9zdmc+'; this.alt='Failed to load';"
+                         onclick="confirmDeleteImage('${publicId}')">
+                    <div class="image-controls">
+                        <span class="image-position">#${index + 1}</span>
+                        <div class="move-buttons">
+                            <button class="btn btn-move" onclick="moveImageUp(${index})" 
+                                    ${index === 0 ? 'disabled' : ''}>⬆️ Up</button>
+                            <button class="btn btn-move" onclick="moveImageDown(${index})" 
+                                    ${index === imagesToDisplay.length - 1 ? 'disabled' : ''}>⬇️ Down</button>
+                            <button class="btn btn-danger" onclick="confirmDeleteImage('${publicId}')">🗑️ Delete</button>
+                        </div>
+                    </div>
+                `;
                 
-                const upButton = document.createElement('button');
-                upButton.innerText = 'Up';
-                upButton.onclick = () => moveImage(index, -1);
-                
-                const downButton = document.createElement('button');
-                downButton.innerText = 'Down';
-                downButton.onclick = () => moveImage(index, 1);
-                
-                imageItem.appendChild(img);
-                imageItem.appendChild(upButton);
-                imageItem.appendChild(downButton);
                 imageList.appendChild(imageItem);
             });
             
-            console.log(`Displayed ${images.length} images`);
+            console.log(`Displayed ${imagesToDisplay.length} images`);
         }
 
         function confirmDeleteImage(publicId) {
@@ -294,58 +658,90 @@
                     return;
                 }
                 
-                const images = await response.json();
-                console.log('Delete successful, refreshed images:', images);
-                displayImages(images);
+                const updatedImages = await response.json();
+                console.log('Delete successful, refreshed images:', updatedImages);
+                images = updatedImages;
+                displayImages(updatedImages);
             } catch (error) {
                 console.error('Delete error:', error);
                 alert('Delete failed. Please try again.');
             }
         }
 
-        async function moveImage(index, direction) {
-            try {
-                const response = await fetch(`/images/move`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ index, direction })
-                });
-                
-                if (!response.ok) {
-                    const error = await response.json();
-                    console.warn(`Move operation not supported: ${error.error || 'Unknown error'}`);
-                    return;
-                }
-                
-                const images = await response.json();
-                displayImages(images);
-            } catch (error) {
-                console.error('Move error:', error);
+        function moveImageUp(index) {
+            if (index > 0) {
+                const newImages = [...images];
+                [newImages[index], newImages[index - 1]] = [newImages[index - 1], newImages[index]];
+                images = newImages;
+                displayImages(newImages);
+                // Note: Since Cloudinary doesn't support reordering, this is just a visual change
+                // The order will reset on next refresh from server
+                console.log(`Moved image from position ${index + 1} to ${index}`);
+            }
+        }
+
+        function moveImageDown(index) {
+            if (index < images.length - 1) {
+                const newImages = [...images];
+                [newImages[index], newImages[index + 1]] = [newImages[index + 1], newImages[index]];
+                images = newImages;
+                displayImages(newImages);
+                // Note: Since Cloudinary doesn't support reordering, this is just a visual change
+                // The order will reset on next refresh from server
+                console.log(`Moved image from position ${index + 1} to ${index + 2}`);
             }
         }
 
         function setupWebSocket() {
             try {
                 socket = new WebSocket(`ws://${window.location.host}`);
+                
                 socket.onopen = () => {
                     console.log('WebSocket connection established');
+                    updateStatus('status-connected', '🟢 Connected');
                 };
+                
                 socket.onmessage = (event) => {
                     if (event.data === 'refresh') {
                         console.log('Received refresh signal, fetching images');
                         fetchImages();
                     }
                 };
+                
                 socket.onclose = () => {
                     console.log('WebSocket connection closed');
+                    updateStatus('status-disconnected', '🔴 Disconnected');
+                    // Try to reconnect after 5 seconds
+                    setTimeout(() => {
+                        console.log('Attempting to reconnect...');
+                        setupWebSocket();
+                    }, 5000);
                 };
+                
                 socket.onerror = (error) => {
                     console.error('WebSocket error:', error);
+                    updateStatus('status-disconnected', '⚠️ Connection Error');
                 };
             } catch (error) {
                 console.error('Failed to setup WebSocket:', error);
+                updateStatus('status-disconnected', '❌ Connection Failed');
             }
         }
+
+        // Allow Enter key to submit forms
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('password').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') authenticate();
+            });
+            
+            document.getElementById('pID').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') updateIframe();
+            });
+            
+            document.getElementById('wnr').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') updateIframe();
+            });
+        });
 
         // Check authentication status on page load
         checkAuth();

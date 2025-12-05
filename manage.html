@@ -694,7 +694,12 @@
 
         function setupWebSocket() {
             try {
-                socket = new WebSocket(`ws://${window.location.host}`);
+                // Determine WebSocket protocol based on page protocol
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const wsUrl = `${protocol}//${window.location.host}`;
+                console.log('Connecting to WebSocket:', wsUrl);
+                
+                socket = new WebSocket(wsUrl);
                 
                 socket.onopen = () => {
                     console.log('WebSocket connection established');

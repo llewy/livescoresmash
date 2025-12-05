@@ -32,11 +32,40 @@
             border: none;
             position: absolute;
         }
+        
+        .status-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            color: white;
+            font-weight: 600;
+            font-size: 12px;
+            z-index: 1000;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        .status-connected {
+            background: linear-gradient(45deg, #56ab2f 0%, #a8e6cf 100%);
+        }
+
+        .status-disconnected {
+            background: linear-gradient(45deg, #fc4a1a 0%, #f7b733 100%);
+        }
+
+        .status-connecting {
+            background: linear-gradient(45deg, #4facfe 0%, #00f2fe 100%);
+        }
     </style>
 </head>
 <body>
     <div class="background"></div>
     <iframe id="liveScore" src=""></iframe>
+    <div class="status-indicator status-connecting" id="statusIndicator">
+        <span id="statusText">🔄 Connecting...</span>
+    </div>
     <script>
         // Configuration
         const CONFIG = {
@@ -44,6 +73,27 @@
             MIN_DISPLAY_TIME: 5,   // Minimum display time per image
             MAX_DISPLAY_TIME: 30   // Maximum display time per image
         };
+
+        function updateStatus(status, text) {
+            const indicator = document.getElementById('statusIndicator');
+            const statusText = document.getElementById('statusText');
+            indicator.className = `status-indicator ${status}`;
+            statusText.textContent = text;
+            
+            // Auto-hide after 5 seconds if connected
+            if (status === 'status-connected') {
+                setTimeout(() => {
+                    indicator.style.opacity = '0.7';
+                    setTimeout(() => {
+                        indicator.style.display = 'none';
+                    }, 3000);
+                }, 5000);
+            } else {
+                // Show indicator for errors/connecting states
+                indicator.style.display = 'block';
+                indicator.style.opacity = '1';
+            }
+        }
 
         async function fetchParams() {
             try {
@@ -132,29 +182,68 @@
         }
 
         function setupWebSocket() {
-            const socket = new WebSocket(`ws://${window.location.host}`);
+            updateStatus('status-connecting', '🔄 Connecting...');
             
-            socket.onopen = () => {
-                console.log('WebSocket connected');
-            };
-            
-            socket.onmessage = (event) => {
-                if (event.data === 'refresh') {
-                    fetchParams();
-                    fetchImages();
-                }
-            };
-            
-            socket.onclose = () => {
-                console.log('WebSocket disconnected, attempting to reconnect in 5 seconds');
+            try {
+                // Determine WebSocket protocol based on page protocol
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const wsUrl = `${protocol}//${window.location.host}`;
+                console.log('Connecting to WebSocket:', wsUrl);
+                
+                const socket = new WebSocket(wsUrl);
+                
+                socket.onopen = () => {
+                    console.log('WebSocket connected successfully');
+                    updateStatus('status-connected', '🟢 Connected');
+                };
+                
+                socket.onmessage = (event) => {
+                    console.log('WebSocket message received:', event.data);
+                    if (event.data === 'refresh') {
+                        console.log('Refreshing data...');
+                        fetchParams();
+                        fetchImages();
+                    }
+                };
+                
+                socket.onclose = (event) => {
+                    console.log('WebSocket disconnected, code:', event.code, 'reason:', event.reason);
+                    updateStatus('status-disconnected', '🔴 Disconnected');
+                    // Try to reconnect after 5 seconds
+                    setTimeout(() => {
+                        console.log('Attempting to reconnect WebSocket...');
+                        setupWebSocket();
+                    }, 5000);
+                };
+                
+                socket.onerror = (error) => {
+                    console.error('WebSocket error:', error);
+                    updateStatus('status-disconnected', '❌ Connection Error');
+                };
+                
+                // Set a timeout for connection establishment
+                setTimeout(() => {
+                    if (socket.readyState === WebSocket.CONNECTING) {
+                        console.log('WebSocket connection timeout');
+                        updateStatus('status-disconnected', '⏱️ Connection Timeout');
+                        socket.close();
+                    }
+                }, 10000); // 10 second timeout
+                
+            } catch (error) {
+                console.error('Failed to create WebSocket:', error);
+                updateStatus('status-disconnected', '❌ Connection Failed');
+                // Retry after 5 seconds
                 setTimeout(setupWebSocket, 5000);
-            };
-            
-            socket.onerror = (error) => {
-                console.error('WebSocket error:', error);
-            };
+            }
         }
 
+        // Initialize the application
+        console.log('Starting Live Score Overlay...');
+        console.log('Current host:', window.location.host);
+        console.log('Protocol:', window.location.protocol);
+        console.log('WebSocket protocol will be:', window.location.protocol === 'https:' ? 'wss:' : 'ws:');
+        
         fetchParams();
         fetchImages();
         setupWebSocket();

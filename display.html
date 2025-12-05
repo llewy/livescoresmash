@@ -18,8 +18,10 @@
             width: 100%;
             height: 100%;
             z-index: -1;
-            background-size: cover;
-            animation: changeBackground 60s steps(1, end) infinite;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center center;
+            /* Animation duration will be set dynamically */
         }
         iframe {
             position: absolute;
@@ -36,6 +38,13 @@
     <div class="background"></div>
     <iframe id="liveScore" src=""></iframe>
     <script>
+        // Configuration
+        const CONFIG = {
+            SECONDS_PER_IMAGE: 10, // How long each image is displayed (in seconds)
+            MIN_DISPLAY_TIME: 5,   // Minimum display time per image
+            MAX_DISPLAY_TIME: 30   // Maximum display time per image
+        };
+
         async function fetchParams() {
             try {
                 const response = await fetch('/params');
@@ -49,32 +58,74 @@
         async function fetchImages() {
             try {
                 const response = await fetch('/images');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
                 const images = await response.json();
+                console.log('Fetched images:', images);
                 
                 if (!Array.isArray(images) || images.length === 0) {
                     console.log('No images available');
+                    // Remove animation if no images
+                    const background = document.querySelector('.background');
+                    background.style.animation = 'none';
                     return;
                 }
                 
+                // Configuration: seconds per image
+                const SECONDS_PER_IMAGE = Math.max(
+                    CONFIG.MIN_DISPLAY_TIME, 
+                    Math.min(CONFIG.MAX_DISPLAY_TIME, CONFIG.SECONDS_PER_IMAGE)
+                );
+                const totalDuration = images.length * SECONDS_PER_IMAGE;
+                
                 const keyframes = images.map((image, index) => {
-                    const url = typeof image === 'string' ? image : image.url;
+                    // Handle both string URLs and object format
+                    let url;
+                    if (typeof image === 'string') {
+                        url = image;
+                    } else if (image && typeof image === 'object' && image.url) {
+                        url = image.url;
+                    } else {
+                        console.error('Invalid image format:', image);
+                        return '';
+                    }
+                    
+                    // Calculate percentages for smooth transitions
+                    const startPercentage = (index / images.length) * 100;
+                    const endPercentage = ((index + 1) / images.length) * 100;
+                    
+                    // Each image should be visible for most of its time slot
                     return `
-                     ${(index / images.length) * 100}% {
-                        background: url('${url}') no-repeat center center fixed;
-                        background-size: contain;
-                         }
+                        ${startPercentage}% { background-image: url('${url}'); }
+                        ${Math.min(endPercentage - 0.1, startPercentage + (100 / images.length) - 0.1)}% { background-image: url('${url}'); }
                     `;
-                }).join(' ');
+                }).filter(frame => frame !== '').join('\n');
+                
+                console.log(`Generated keyframes for ${images.length} images, ${SECONDS_PER_IMAGE}s each:`, keyframes);
                 
                 const styleSheet = document.styleSheets[0];
+                
                 // Remove existing animation rule if it exists
                 for (let i = styleSheet.cssRules.length - 1; i >= 0; i--) {
-                    if (styleSheet.cssRules[i].name === 'changeBackground') {
+                    const rule = styleSheet.cssRules[i];
+                    if (rule.type === CSSRule.KEYFRAMES_RULE && rule.name === 'changeBackground') {
                         styleSheet.deleteRule(i);
                         break;
                     }
                 }
-                styleSheet.insertRule(`@keyframes changeBackground { ${keyframes} }`, styleSheet.cssRules.length);
+                
+                // Add new animation rule with dynamic duration
+                const animationRule = `@keyframes changeBackground { ${keyframes} }`;
+                styleSheet.insertRule(animationRule, styleSheet.cssRules.length);
+                
+                // Apply animation to background element with calculated duration
+                const background = document.querySelector('.background');
+                background.style.animation = `changeBackground ${totalDuration}s steps(1, end) infinite`;
+                
+                console.log(`Animation updated: ${totalDuration}s total duration (${SECONDS_PER_IMAGE}s per image)`);
+                
             } catch (error) {
                 console.error('Error fetching images:', error);
             }

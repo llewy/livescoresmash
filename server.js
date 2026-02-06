@@ -97,8 +97,8 @@ const upload = multer({
 
 // Default parameters with validation
 let params = { 
-    pID: process.env.DEFAULT_PID || '1023506', 
-    wnr: process.env.DEFAULT_WNR || '92204' 
+    pID: process.env.DEFAULT_PID || '1023540', 
+    wnr: process.env.DEFAULT_WNR || '92107' 
 };
 const PASSWORD = process.env.PASSWORD || '1234'; // Use environment variable or default
 

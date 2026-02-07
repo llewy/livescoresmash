@@ -21,7 +21,8 @@ app.use(helmet({
             imgSrc: ["'self'", "data:", "https:", "http:"],
             scriptSrc: ["'self'", "'unsafe-inline'"],
             styleSrc: ["'self'", "'unsafe-inline'"],
-            connectSrc: ["'self'", "ws:", "wss:"]
+            connectSrc: ["'self'", "ws:", "wss:"],
+            frameSrc: ["'self'", "https://www.nttb-ranglijsten.nl"]
         }
     }
 }));

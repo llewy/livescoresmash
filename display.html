@@ -1,422 +1,340 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; frame-src 'self' https://www.nttb-ranglijsten.nl; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' ws: wss:;">
-    <title>Live Score Overlay</title>
-    <style>
-        body, html {
-            margin: 0;
-            padding: 0;
-            height: 100%;
-            overflow: hidden;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-        }
-        .background {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -1;
-            background-size: cover;
-            background-repeat: no-repeat;
-            background-position: center center;
-            will-change: background-image;
-            backface-visibility: hidden;
-        }
-        iframe {
-            position: absolute;
-            top: 10%;
-            left: 10%;
-            width: 80%;
-            height: 70%;
-            border: none;
-            border-radius: 8px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-        }
-        
-        .status-indicator {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 10px 20px;
-            border-radius: 25px;
-            color: white;
-            font-weight: 600;
-            font-size: 14px;
-            z-index: 1000;
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 15px rgba(0,0,0,0.3);
-            backdrop-filter: blur(10px);
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Live Score Overlay</title>
+<style>
+body, html {
+margin: 0;
+padding: 0;
+height: 100%;
+overflow: hidden;
+}
+.background {
+position: absolute;
+top: 0;
+left: 0;
+width: 100%;
+height: 100%;
+z-index: -1;
+background-size: contain;
+background-repeat: no-repeat;
+background-position: center center;
+/* Animation duration will be set dynamically */
+}
+iframe {
+position: absolute;
+top: 70%;
+left: 10%;
+width: 60%;
+height: 60%;
+border: none;
+position: absolute;
+}
 
-        .status-connected {
-            background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
-        }
+.status-indicator {
+position: fixed;
+top: 20px;
+right: 20px;
+padding: 8px 16px;
+border-radius: 20px;
+color: white;
+font-weight: 600;
+font-size: 12px;
+z-index: 1000;
+transition: all 0.3s ease;
+box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+}
 
-        .status-disconnected {
-            background: linear-gradient(135deg, #fc4a1a 0%, #f7b733 100%);
-        }
+.status-connected {
+background: linear-gradient(45deg, #56ab2f 0%, #a8e6cf 100%);
+}
 
-        .status-connecting {
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-            animation: pulse 2s ease-in-out infinite;
-        }
+.status-disconnected {
+background: linear-gradient(45deg, #fc4a1a 0%, #f7b733 100%);
+}
 
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
-        }
+.status-connecting {
+background: linear-gradient(45deg, #4facfe 0%, #00f2fe 100%);
+}
 
+        /* Google TV specific optimizations */
         .debug-info {
             position: fixed;
             bottom: 10px;
             left: 10px;
-            background: rgba(0,0,0,0.8);
-            color: #00ff00;
-            padding: 15px;
-            border-radius: 8px;
-            font-family: 'Courier New', monospace;
-            font-size: 11px;
-            max-width: 400px;
-            max-height: 200px;
-            overflow-y: auto;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            max-width: 300px;
             display: none;
             z-index: 2000;
-            line-height: 1.5;
         }
 
-        .error-message {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(255,0,0,0.9);
-            color: white;
-            padding: 20px 30px;
-            border-radius: 10px;
-            font-size: 16px;
-            z-index: 3000;
-            display: none;
-            text-align: center;
+        /* Ensure animations work on lower-powered devices */
+        @media (max-width: 1920px) {
+            .background {
+                will-change: background-image;
+                backface-visibility: hidden;
+            }
         }
-    </style>
+</style>
 </head>
 <body>
-    <div class="background" id="background"></div>
-    <iframe id="liveScore" src="" allow="autoplay"></iframe>
-    <div class="status-indicator status-connecting" id="statusIndicator">
-        <span id="statusText">🔄 Connecting...</span>
-    </div>
-    <div class="debug-info" id="debugInfo"></div>
-    <div class="error-message" id="errorMessage"></div>
+<div class="background"></div>
+<iframe id="liveScore" src=""></iframe>
+<div class="status-indicator status-connecting" id="statusIndicator">
+<span id="statusText">🔄 Connecting...</span>
+</div>
+    <div class="debug-info" id="debug-info"></div>
+<script>
+// Configuration
+const CONFIG = {
+SECONDS_PER_IMAGE: 10, // How long each image is displayed (in seconds)
+MIN_DISPLAY_TIME: 5,   // Minimum display time per image
+MAX_DISPLAY_TIME: 30   // Maximum display time per image
+};
 
-    <script>
-        'use strict';
+        // Google TV compatibility check
+        function isGoogleTV() {
+            const userAgent = navigator.userAgent.toLowerCase();
+            return userAgent.includes('googletv') || 
+                   userAgent.includes('android tv') ||
+                   userAgent.includes('chrome os');
+        }
 
-        // Configuration
-        const CONFIG = {
-            SECONDS_PER_IMAGE: 10,
-            MIN_DISPLAY_TIME: 5,
-            MAX_DISPLAY_TIME: 30,
-            RECONNECT_DELAY: 5000,
-            CONNECTION_TIMEOUT: 10000,
-            DEBUG_MODE: false // Set to true for debugging
-        };
-
-        // State management
-        let wsSocket = null;
-        let reconnectTimer = null;
-        let connectionAttempts = 0;
-
-        // Utility: Enhanced logging
+        // Enhanced logging for Google TV debugging
         function log(message, data) {
-            const timestamp = new Date().toISOString();
-            const logMessage = `[${timestamp}] ${message}`;
-            console.log(logMessage, data || '');
-            
-            if (CONFIG.DEBUG_MODE) {
-                const debugInfo = document.getElementById('debugInfo');
-                if (debugInfo) {
-                    debugInfo.style.display = 'block';
-                    const entry = document.createElement('div');
-                    entry.textContent = logMessage + (data ? ': ' + JSON.stringify(data) : '');
-                    debugInfo.insertBefore(entry, debugInfo.firstChild);
-                    
-                    // Keep only last 10 entries
-                    while (debugInfo.children.length > 10) {
-                        debugInfo.removeChild(debugInfo.lastChild);
-                    }
+            console.log('[LiveScore]', message, data || '');
+            // For Google TV debugging, you might also want to show visual feedback
+            if (isGoogleTV()) {
+                const debug = document.getElementById('debug-info');
+                if (debug) {
+                    debug.textContent = message + (data ? ': ' + JSON.stringify(data) : '');
                 }
             }
         }
 
-        // Utility: Show error message
-        function showError(message) {
-            const errorDiv = document.getElementById('errorMessage');
-            if (errorDiv) {
-                errorDiv.textContent = message;
-                errorDiv.style.display = 'block';
-                setTimeout(() => {
-                    errorDiv.style.display = 'none';
-                }, 5000);
-            }
-        }
-
-        // Status indicator management
-        function updateStatus(status, text) {
-            const indicator = document.getElementById('statusIndicator');
-            const statusText = document.getElementById('statusText');
+function updateStatus(status, text) {
+const indicator = document.getElementById('statusIndicator');
+const statusText = document.getElementById('statusText');
+            indicator.className = `status-indicator ${status}`;
             if (!indicator || !statusText) return;
             
             indicator.className = 'status-indicator ' + status;
-            statusText.textContent = text;
-            log('Status updated', status);
-            
-            // Auto-hide after success
-            if (status === 'status-connected') {
-                setTimeout(() => {
-                    indicator.style.opacity = '0.3';
-                    setTimeout(() => {
-                        indicator.style.display = 'none';
-                    }, 2000);
-                }, 3000);
-            } else {
-                indicator.style.display = 'block';
-                indicator.style.opacity = '1';
-            }
-        }
+statusText.textContent = text;
 
-        // Fetch parameters and update iframe
-        async function fetchParams() {
-            log('Fetching parameters...');
+            log('Status updated', status + ': ' + text);
             
+// Auto-hide after 5 seconds if connected
+if (status === 'status-connected') {
+                setTimeout(() => {
+                setTimeout(function() {
+indicator.style.opacity = '0.7';
+                    setTimeout(() => {
+                    setTimeout(function() {
+indicator.style.display = 'none';
+}, 3000);
+}, 5000);
+} else {
+// Show indicator for errors/connecting states
+indicator.style.display = 'block';
+indicator.style.opacity = '1';
+}
+}
+
+        async function fetchParams() {
             try {
                 const response = await fetch('/params');
-                if (!response.ok) {
-                    throw new Error('Failed to fetch params: ' + response.status);
-                }
-                
-                const data = await response.json();
-                const iframe = document.getElementById('liveScore');
-                const iframeUrl = `https://www.nttb-ranglijsten.nl/sb/sb_livescore.html?pID=${data.pID}&wnr=${data.wnr}&templ=5`;
-                
-                iframe.src = iframeUrl;
-                log('Parameters loaded', {pID: data.pID, wnr: data.wnr});
-                
-                // Handle iframe load errors
-                iframe.onerror = () => {
-                    log('Iframe failed to load');
-                    showError('Failed to load live score. Check CSP settings.');
-                };
-                
+                const { pID, wnr } = await response.json();
+                document.getElementById('liveScore').src = `https://www.nttb-ranglijsten.nl/sb/sb_livescore.html?pID=${pID}&wnr=${wnr}&templ=5`;
             } catch (error) {
-                log('Error fetching params', error.message);
-                showError('Failed to load parameters: ' + error.message);
-            }
-        }
-
-        // Fetch and animate background images
-        async function fetchImages() {
-            log('Fetching images...');
+                console.error('Error fetching params:', error);
+        function fetchParams() {
+            log('Fetching parameters...');
             
-            try {
-                const response = await fetch('/images');
-                if (!response.ok) {
-                    throw new Error('Failed to fetch images: ' + response.status);
-                }
-                
-                const images = await response.json();
-                log('Fetched images', {count: images.length});
-                
-                if (!Array.isArray(images) || images.length === 0) {
-                    log('No images available');
-                    return;
-                }
-                
-                // Validate and normalize image URLs
-                const validImages = images.filter(img => {
-                    if (typeof img === 'string') return true;
-                    if (img && typeof img === 'object' && img.url) return true;
-                    log('Invalid image format', img);
-                    return false;
-                }).map(img => typeof img === 'string' ? img : img.url);
-                
-                if (validImages.length === 0) {
-                    log('No valid images found');
-                    return;
-                }
-                
-                // Calculate animation timing
-                const secondsPerImage = Math.max(
-                    CONFIG.MIN_DISPLAY_TIME,
-                    Math.min(CONFIG.MAX_DISPLAY_TIME, CONFIG.SECONDS_PER_IMAGE)
-                );
-                const totalDuration = validImages.length * secondsPerImage;
-                
-                // Generate keyframes
-                const keyframes = validImages.map((url, index) => {
-                    const startPct = (index / validImages.length) * 100;
-                    const endPct = ((index + 1) / validImages.length) * 100;
-                    return `
-                        ${startPct.toFixed(2)}% { background-image: url('${url}'); }
-                        ${Math.min(endPct - 0.1, startPct + (100 / validImages.length) - 0.1).toFixed(2)}% { background-image: url('${url}'); }
-                    `;
-                }).join('\n');
-                
-                // Update CSS animation
-                const styleSheet = document.styleSheets[0];
-                
-                // Remove existing animation
-                for (let i = styleSheet.cssRules.length - 1; i >= 0; i--) {
-                    const rule = styleSheet.cssRules[i];
-                    if (rule.type === CSSRule.KEYFRAMES_RULE && rule.name === 'changeBackground') {
-                        styleSheet.deleteRule(i);
-                        break;
-                    }
-                }
-                
-                // Add new animation
-                const animationRule = `@keyframes changeBackground { ${keyframes} }`;
-                styleSheet.insertRule(animationRule, styleSheet.cssRules.length);
-                
-                // Apply animation
-                const background = document.getElementById('background');
-                background.style.animation = `changeBackground ${totalDuration}s steps(1, end) infinite`;
-                
-                log('Animation applied', {
-                    images: validImages.length,
-                    duration: totalDuration + 's',
-                    perImage: secondsPerImage + 's'
-                });
-                
-            } catch (error) {
-                log('Error fetching images', error.message);
-                showError('Failed to load background images');
-            }
-        }
-
-        // WebSocket connection management
-        function setupWebSocket() {
-            // Clear any existing reconnect timer
-            if (reconnectTimer) {
-                clearTimeout(reconnectTimer);
-                reconnectTimer = null;
-            }
-            
-            // Close existing socket if any
-            if (wsSocket && wsSocket.readyState !== WebSocket.CLOSED) {
-                wsSocket.close();
-            }
-            
-            updateStatus('status-connecting', '🔄 Connecting...');
-            connectionAttempts++;
-            
-            try {
-                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-                const wsUrl = `${protocol}//${window.location.host}`;
-                log('Connecting to WebSocket', {url: wsUrl, attempt: connectionAttempts});
-                
-                wsSocket = new WebSocket(wsUrl);
-                
-                // Connection timeout
-                const timeoutId = setTimeout(() => {
-                    if (wsSocket.readyState === WebSocket.CONNECTING) {
-                        log('WebSocket connection timeout');
-                        updateStatus('status-disconnected', '⏱️ Connection Timeout');
-                        wsSocket.close();
-                    }
-                }, CONFIG.CONNECTION_TIMEOUT);
-                
-                wsSocket.onopen = () => {
-                    clearTimeout(timeoutId);
-                    connectionAttempts = 0; // Reset on successful connection
-                    log('WebSocket connected');
-                    updateStatus('status-connected', '🟢 Connected');
-                };
-                
-                wsSocket.onmessage = (event) => {
-                    log('WebSocket message', event.data);
-                    if (event.data === 'refresh') {
-                        log('Refreshing data...');
-                        fetchParams();
-                        fetchImages();
+            // Use XMLHttpRequest for better Google TV compatibility
+            if (window.fetch) {
+                // Modern browsers (including recent Google TV)
+                return fetch('/params')
+                    .then(function(response) {
+                        return response.json();
+                    })
+                    .then(function(data) {
+                        var pID = data.pID;
+                        var wnr = data.wnr;
+                        var iframe = document.getElementById('liveScore');
+                        iframe.src = 'https://www.nttb-ranglijsten.nl/sb/sb_livescore.html?pID=' + pID + '&wnr=' + wnr + '&templ=5';
+                        log('Parameters loaded', {pID: pID, wnr: wnr});
+                    })
+                    .catch(function(error) {
+                        log('Error fetching params', error.message);
+                    });
+            } else {
+                // Fallback for older browsers
+                var xhr = new XMLHttpRequest();
+                xhr.open('GET', '/params', true);
+                xhr.onreadystatechange = function() {
+                    if (xhr.readyState === 4 && xhr.status === 200) {
+                        try {
+                            var data = JSON.parse(xhr.responseText);
+                            var iframe = document.getElementById('liveScore');
+                            iframe.src = 'https://www.nttb-ranglijsten.nl/sb/sb_livescore.html?pID=' + data.pID + '&wnr=' + data.wnr + '&templ=5';
+                            log('Parameters loaded (XHR)', data);
+                        } catch (e) {
+                            log('Error parsing params', e.message);
+                        }
                     }
                 };
-                
-                wsSocket.onclose = (event) => {
-                    clearTimeout(timeoutId);
-                    log('WebSocket disconnected', {code: event.code, reason: event.reason});
-                    updateStatus('status-disconnected', '🔴 Disconnected');
-                    
-                    // Exponential backoff for reconnection
-                    const delay = Math.min(CONFIG.RECONNECT_DELAY * connectionAttempts, 30000);
-                    log('Scheduling reconnect', {delay: delay + 'ms'});
-                    
-                    reconnectTimer = setTimeout(() => {
-                        log('Attempting reconnection...');
-                        setupWebSocket();
-                    }, delay);
-                };
-                
-                wsSocket.onerror = (error) => {
-                    log('WebSocket error', error);
-                    updateStatus('status-disconnected', '❌ Connection Error');
-                };
-                
-            } catch (error) {
-                log('Failed to create WebSocket', error.message);
-                updateStatus('status-disconnected', '❌ Connection Failed');
-                showError('WebSocket connection failed');
-                
-                // Retry with backoff
-                reconnectTimer = setTimeout(setupWebSocket, CONFIG.RECONNECT_DELAY);
-            }
-        }
+                xhr.send();
+}
+}
 
-        // Keyboard shortcuts for debugging
-        document.addEventListener('keydown', (e) => {
-            // Press 'D' to toggle debug mode
-            if (e.key === 'd' || e.key === 'D') {
-                CONFIG.DEBUG_MODE = !CONFIG.DEBUG_MODE;
-                const debugInfo = document.getElementById('debugInfo');
-                if (debugInfo) {
-                    debugInfo.style.display = CONFIG.DEBUG_MODE ? 'block' : 'none';
-                }
-                log('Debug mode', CONFIG.DEBUG_MODE ? 'enabled' : 'disabled');
-            }
-            
-            // Press 'R' to manually refresh
-            if (e.key === 'r' || e.key === 'R') {
-                log('Manual refresh triggered');
-                fetchParams();
-                fetchImages();
-            }
-        });
+async function fetchImages() {
+try {
+const response = await fetch('/images');
+if (!response.ok) {
+throw new Error(`HTTP error! status: ${response.status}`);
+}
 
-        // Initialize application
-        log('Initializing Live Score Overlay', {
-            host: window.location.host,
-            protocol: window.location.protocol,
-            wsProtocol: window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-        });
-        
-        // Start everything
-        fetchParams();
-        fetchImages();
-        setupWebSocket();
-        
-        // Cleanup on page unload
-        window.addEventListener('beforeunload', () => {
-            if (wsSocket) {
-                wsSocket.close();
-            }
-            if (reconnectTimer) {
-                clearTimeout(reconnectTimer);
-            }
-        });
-    </script>
+const images = await response.json();
+console.log('Fetched images:', images);
+
+if (!Array.isArray(images) || images.length === 0) {
+console.log('No images available');
+// Remove animation if no images
+const background = document.querySelector('.background');
+background.style.animation = 'none';
+return;
+}
+
+// Configuration: seconds per image
+const SECONDS_PER_IMAGE = Math.max(
+CONFIG.MIN_DISPLAY_TIME, 
+Math.min(CONFIG.MAX_DISPLAY_TIME, CONFIG.SECONDS_PER_IMAGE)
+);
+const totalDuration = images.length * SECONDS_PER_IMAGE;
+
+const keyframes = images.map((image, index) => {
+// Handle both string URLs and object format
+let url;
+if (typeof image === 'string') {
+url = image;
+} else if (image && typeof image === 'object' && image.url) {
+url = image.url;
+} else {
+console.error('Invalid image format:', image);
+return '';
+}
+
+// Calculate percentages for smooth transitions
+const startPercentage = (index / images.length) * 100;
+const endPercentage = ((index + 1) / images.length) * 100;
+
+// Each image should be visible for most of its time slot
+return `
+                       ${startPercentage}% { background-image: url('${url}'); }
+                       ${Math.min(endPercentage - 0.1, startPercentage + (100 / images.length) - 0.1)}% { background-image: url('${url}'); }
+                   `;
+}).filter(frame => frame !== '').join('\n');
+
+console.log(`Generated keyframes for ${images.length} images, ${SECONDS_PER_IMAGE}s each:`, keyframes);
+
+const styleSheet = document.styleSheets[0];
+
+// Remove existing animation rule if it exists
+for (let i = styleSheet.cssRules.length - 1; i >= 0; i--) {
+const rule = styleSheet.cssRules[i];
+if (rule.type === CSSRule.KEYFRAMES_RULE && rule.name === 'changeBackground') {
+styleSheet.deleteRule(i);
+break;
+}
+}
+
+// Add new animation rule with dynamic duration
+const animationRule = `@keyframes changeBackground { ${keyframes} }`;
+styleSheet.insertRule(animationRule, styleSheet.cssRules.length);
+
+// Apply animation to background element with calculated duration
+const background = document.querySelector('.background');
+background.style.animation = `changeBackground ${totalDuration}s steps(1, end) infinite`;
+
+console.log(`Animation updated: ${totalDuration}s total duration (${SECONDS_PER_IMAGE}s per image)`);
+
+} catch (error) {
+console.error('Error fetching images:', error);
+}
+}
+
+function setupWebSocket() {
+updateStatus('status-connecting', '🔄 Connecting...');
+
+try {
+// Determine WebSocket protocol based on page protocol
+const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+const wsUrl = `${protocol}//${window.location.host}`;
+console.log('Connecting to WebSocket:', wsUrl);
+
+const socket = new WebSocket(wsUrl);
+
+socket.onopen = () => {
+console.log('WebSocket connected successfully');
+updateStatus('status-connected', '🟢 Connected');
+};
+
+socket.onmessage = (event) => {
+console.log('WebSocket message received:', event.data);
+if (event.data === 'refresh') {
+console.log('Refreshing data...');
+fetchParams();
+fetchImages();
+}
+};
+
+socket.onclose = (event) => {
+console.log('WebSocket disconnected, code:', event.code, 'reason:', event.reason);
+updateStatus('status-disconnected', '🔴 Disconnected');
+// Try to reconnect after 5 seconds
+setTimeout(() => {
+console.log('Attempting to reconnect WebSocket...');
+setupWebSocket();
+}, 5000);
+};
+
+socket.onerror = (error) => {
+console.error('WebSocket error:', error);
+updateStatus('status-disconnected', '❌ Connection Error');
+};
+
+// Set a timeout for connection establishment
+setTimeout(() => {
+if (socket.readyState === WebSocket.CONNECTING) {
+console.log('WebSocket connection timeout');
+updateStatus('status-disconnected', '⏱️ Connection Timeout');
+socket.close();
+}
+}, 10000); // 10 second timeout
+
+} catch (error) {
+console.error('Failed to create WebSocket:', error);
+updateStatus('status-disconnected', '❌ Connection Failed');
+// Retry after 5 seconds
+setTimeout(setupWebSocket, 5000);
+}
+}
+
+// Initialize the application
+console.log('Starting Live Score Overlay...');
+console.log('Current host:', window.location.host);
+console.log('Protocol:', window.location.protocol);
+console.log('WebSocket protocol will be:', window.location.protocol === 'https:' ? 'wss:' : 'ws:');
+
+fetchParams();
+fetchImages();
+setupWebSocket();
+</script>
 </body>
-</html>
